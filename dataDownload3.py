@@ -81,28 +81,51 @@ for dataset in allDatasets:
                 print("error occur\n")
                 page_request(srxUrl, gse2srrUrlDirCache, srxNo, dataset)
 """
+'''
+gse2srxUrlDir = destdir + "/gse2srxUrlDir"
+gseVec = os.listdir(gse2srxUrlDir)
+
+
+class gse2srx:
+    gse = []
+    srx = []
+
+    def __init__(self, gse, srx):
+        self.gse = gse
+        self.srx = srx
+
+for ii in gseVec:
+    with open(gse2srxUrlDir + "/" + ii, "r") as gse2srxFile:
+        for jj in gse2srxFile:
+            gse2srx.gse.append(ii.split("_")[0])
+            gse2srx.srx.append(jj.replace("\n","").split("=")[1])
 
 gse2srrUrlDir = destdir + "/gse2srrUrlDir"
 gse2srrUrlDirCache = gse2srrUrlDir + "/pageCache"
 
-'''
+
 pageCacheList = os.listdir(gse2srrUrlDirCache)
 
 regex=re.compile('run=SRR[0-9]+?">SRR[0-9]+?</a>')
 SRRNOList = []
 
-with open(gse2srrUrlDir + "/srrUrl", "w") as srrUrl:
-    for pageCacheDir in pageCacheList:
-        with open(gse2srrUrlDirCache + "/" + pageCacheDir, "r", encoding='utf-8') as file:
-            fileText = file.read()
-            for rawSRRNo in regex.findall(fileText):
-                SRRNO = rawSRRNo.split('">')[1][:-4]
-                ftpDir = "ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/" + SRRNO[:6] + "/" + SRRNO + "/" + SRRNO + ".sra"
+for pageCacheDir in pageCacheList:
+    with open(gse2srrUrlDirCache + "/" + pageCacheDir, "r", encoding='utf-8') as file:
+        fileText = file.read()
+        gseIndex = gse2srx.srx.index(pageCacheDir)
+        for rawSRRNo in regex.findall(fileText):
+            SRRNO = rawSRRNo.split('">')[1][:-4]
+            ftpDir = "ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/" + SRRNO[:6] + "/" + SRRNO + "/" + SRRNO + ".sra"
+            gse2ftpDir = gse2srx.gse[gseIndex] + "\t" + "ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/" + SRRNO[:6] + "/" + SRRNO + "/" + SRRNO + ".sra"
+            with open(gse2srrUrlDir + "/srrUrl", "w") as srrUrl:
                 srrUrl.write(ftpDir + "\n")
-                print(ftpDir + "\t" + pageCacheDir)
+            with open(gse2srrUrlDir + "/gse2SrrUrl", "w") as gse2SrrUrl:
+                gse2SrrUrl.write(gse2ftpDir + "\n")
+            print(ftpDir + "\t" + pageCacheDir)
 
 
     #break
+
 '''
 
 
