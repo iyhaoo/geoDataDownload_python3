@@ -186,8 +186,8 @@ class ftpSettings:
                 print("lastTime: " + str(lastTime))
                 print("thisTime: " + str(downloadList.time[fileNameIndex]))
                 lastTime = lastTime - 1
-            print("wrinting " + ftpSettings.downloadList.fileName[fileNameIndex] + "\tSpeed: " + str(ftpSettings.cacheLen/((downloadList.time[fileNameIndex]-lastTime)*1000)) +"k/s")
-            print("Fin: " + str(downloadList.finLen[fileNameIndex]) + "\tAll: " + str(downloadList.dataLen[fileNameIndex]) + "\t" + str(100 * downloadList.finLen[fileNameIndex] / downloadList.dataLen[fileNameIndex]))
+            print("wrinting " + ftpSettings.downloadList.fileName[fileNameIndex] + "\tSpeed: " + str(round(ftpSettings.cacheLen/((downloadList.time[fileNameIndex]-lastTime)*1000), 2)) +"k/s")
+            print("Fin: " + str(downloadList.finLen[fileNameIndex]) + "\tAll: " + str(downloadList.dataLen[fileNameIndex]) + "\t" + str(round(100 * downloadList.finLen[fileNameIndex] / downloadList.dataLen[fileNameIndex], 2)))
         #print(downloadList.fileName[fileNameIndex] + "\t" + str(downloadList.finLen[fileNameIndex]) + "\t" + str(downloadList.dataLen[fileNameIndex]) + "\t" + str(len(ftpSettings.downloadCache.cache[catchIndex])) + "\t" + str(100 * downloadList.finLen[fileNameIndex] / downloadList.dataLen[fileNameIndex]))
 
     def retrlinesCallback(self):
@@ -200,6 +200,7 @@ class ftpSettings:
         ftpSettings.downloadList.time.append(time.time())
         ftpSettings.downloadList.dataLen[ftpSettings.downloadList.fileName.index(fileName)] = int(str(regex.findall(str(self))[0]).split(" ")[-1])
         ftpSettings.downloadList.time[ftpSettings.downloadList.fileName.index(fileName)] = time.time()
+        downloadList = ftpSettings.downloadList
 
 def downloadListAdd(ftpServer, remotePath, ftpSettings, timeoutLen):
     try:
@@ -230,7 +231,6 @@ class ftpFileDownloadThread(threading.Thread):
         fileName = singleUrl.split("/")[-1]
         ftpServer = singleUrl.split("/")[2]
         remotePath = singleUrl.split(ftpServer)[1].split("\n")[0]
-        ftpSettings.downloadList = downloadList
         if fileName in ftpSettings.threadAndFile.file:
             fileThreadIndex = ftpSettings.threadAndFile.file.index(fileName)
             ftpSettings.threadAndFile.thread[fileThreadIndex] = threading.get_ident()
@@ -245,16 +245,40 @@ class ftpFileDownloadThread(threading.Thread):
                 print(str(downloadList.fileName[fileNameIndex]) + " has finished")
                 return 0
             else:
-                print("Continue downloading " + str(fileName) + " from " + str(downloadList.finLen[fileNameIndex]/downloadList.dataLen[fileNameIndex]*100) + "\t in " + str(downloadList.finLen[fileNameIndex]) + "/" + str(downloadList.dataLen[fileNameIndex]))
+                if os.path.exists(ftpSettings.saveDir + "/" + fileName):
+                    if os.path.getsize(ftpSettings.saveDir + "/" + fileName) != downloadList.finLen[fileNameIndex]:
+                        os.remove(ftpSettings.saveDir + "/" + fileName)
+                        print("e5: inconsistence", fileName, "finLen:", downloadList.finLen[fileNameIndex], "fileLen:", os.path.getsize(ftpSettings.saveDir + "/" + fileName))
+                        downloadList.finLen[fileNameIndex] = 0
+                else:
+                    downloadList.finLen[fileNameIndex] = 0
+                    print("e6: file lost ", fileName)
+                if downloadList.finLen[fileNameIndex] >= downloadList.dataLen[fileNameIndex]:
+                    os.remove(ftpSettings.saveDir + "/" + fileName)
+                    print("e7: wrong download", fileName, "finLen:", downloadList.finLen[fileNameIndex], "dataLen:", downloadList.dataLen[fileNameIndex])
+                    downloadList.finLen[fileNameIndex] = 0
+                print("Continue downloading " + fileName + " from " + str(round(downloadList.finLen[fileNameIndex]/downloadList.dataLen[fileNameIndex]*100, 2)) + "\t in " + str(downloadList.finLen[fileNameIndex]) + "/" + str(downloadList.dataLen[fileNameIndex]))
         else:
+            ftpSettings.downloadList = downloadList
             downloadListAdd(ftpServer, remotePath, ftpSettings, 10)
-            fileNameIndex = downloadList.fileName.index(fileName)
+            if fileName not in downloadList.fileName:
+                print("e3", fileName in ftpSettings.downloadList.fileName)
+            fileNameIndex = downloadList.fileName.index(fileName)#####
+            if os.path.exists(ftpSettings.saveDir + "/" + fileName):
+                if os.path.getsize(ftpSettings.saveDir + "/" + fileName) != downloadList.dataLen[fileNameIndex]:
+                    os.remove(ftpSettings.saveDir + "/" + fileName)
+                    print("remove wrong downloaded file\t" + fileName)
+        ftpSettings.downloadList = downloadList
         ftp = FTP(host=ftpServer, timeout=60)
         ftp.login()
         ftp.retrbinary(cmd='RETR ' + remotePath, callback=ftpSettings.retrbinaryCallback, rest=downloadList.finLen[fileNameIndex])
         #ftp.retrbinary(cmd='RETR ' + remotePath, callback=ftpSettings.retrbinaryCallback, rest=downloadList.dataLen[fileNameIndex] - 5120000)
         ftp.quit()
-        print(str(downloadList.fileName[fileNameIndex]) + " finished")
+        if os.path.getsize(ftpSettings.saveDir + "/" + fileName) == downloadList.dataLen[fileNameIndex]:
+            print(str(downloadList.fileName[fileNameIndex]) + " finished")
+        else:
+            os.remove(ftpSettings.saveDir + "/" + fileName)
+            raise NameError("downloade finished but wrong\t" + fileName)
         threadIndex = ftpSettings.threadAndFile.thread.index(threading.get_ident())
         del ftpSettings.threadAndFile.thread[threadIndex]
         del ftpSettings.threadAndFile.file[threadIndex]
@@ -268,10 +292,12 @@ class downLoadState(threading.Thread):
             if ftpSettings.downloadList != "":
                 allLog = ""
                 for ii in range(len(ftpSettings.downloadList.fileName)):
-                    allLog += ftpSettings.downloadList.fileName[ii] + "\t" + str(ftpSettings.downloadList.dataLen[ii]) + "\t" + str(ftpSettings.downloadList.finLen[ii]) + "\t" +str(100*ftpSettings.downloadList.finLen[ii]/ftpSettings.downloadList.dataLen[ii]) + "\n"
+                    if ftpSettings.downloadList.dataLen[ii] == 0:
+                        print("e4")
+                    allLog += ftpSettings.downloadList.fileName[ii] + "\t" + str(ftpSettings.downloadList.dataLen[ii]) + "\t" + str(ftpSettings.downloadList.finLen[ii]) + "\t" + str(round(100*ftpSettings.downloadList.finLen[ii]/ftpSettings.downloadList.dataLen[ii], 2)) + "\n"
                 with open(self.downloadDir + "/allLog.log", "w")as allLogFile:
                     allLogFile.write(allLog)
-            time.sleep(10)
+            time.sleep(5)#reflesh time
             if threading.activeCount() <= 2:
                 print("finished?")
                 time.sleep(5)
@@ -320,8 +346,8 @@ def ftpFileDownload(srrUrlContent, downloadDir, maxThreadNum):
 
 
 
-
-
+gse2srrUrlDir = destdir + "/gse2srrUrlDir"
+srrUrlDir = gse2srrUrlDir + "/srrUrl"
 downloadDir = "D:/scRNAseqData/pyDl1"
 
 if os.path.exists(downloadDir):
@@ -330,7 +356,7 @@ else:
     os.mkdir(downloadDir)
 
 
-with open(gse2srrUrlDir + "/srrUrl", "r") as srrUrl:
+with open(srrUrlDir, "r") as srrUrl:
     srrUrlContent = srrUrl.read()
 
 ftpFileDownload(srrUrlContent, downloadDir, 10)
