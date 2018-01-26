@@ -4,7 +4,7 @@ a simple python script to download geo data by gse NOs or srr ftpUrls
 
 create a file like:
 
-ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/SRR208/SRR2089507/SRR2089507.sra<\br>
+ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/SRR208/SRR2089507/SRR2089507.sra
 ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/SRR208/SRR2089508/SRR2089508.sra
 ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/SRR208/SRR2089509/SRR2089509.sra
 ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/SRR208/SRR2089510/SRR2089510.sra
