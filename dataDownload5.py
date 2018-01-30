@@ -137,6 +137,7 @@ class ftpSettings:
     logDir = ""
     downloadLog = ""
     cacheLen = 512000
+    isFinish = 0
     downloadList = {
         "fileName": [],
         "dataLen": [],
@@ -153,7 +154,7 @@ class ftpSettings:
         def __init__(self, thread, file):
             self.thread = thread
             self.file = file
-    def __init__(self, threadAndFile, downloadCache, saveDir="", logDir="", downloadList="", downloadLog = "", cacheLen = 2048000):
+    def __init__(self, threadAndFile, downloadCache, isFinish, saveDir="", logDir="", downloadList="", downloadLog = "", cacheLen = 2048000):
         self.threadAndFile = threadAndFile
         self.downloadCache = downloadCache
         self.saveDir = saveDir
@@ -161,6 +162,7 @@ class ftpSettings:
         self.downloadList = downloadList
         self.downloadLog = downloadLog
         self.cacheLen = cacheLen
+        self.isFinish = isFinish
     def retrbinaryCallback(self):
         threadIndex = ftpSettings.threadAndFile.thread.index(threading.get_ident())
         fileName = ftpSettings.threadAndFile.file[threadIndex]
@@ -320,10 +322,11 @@ class downLoadState(threading.Thread):
             time.sleep(5)#reflesh time
             if threading.activeCount() <= 2:
                 print("finished?")
-                time.sleep(5)
-                if threading.activeCount() <= 2:
-                    print("finished!")
-                    return 0
+                time.sleep(10)
+                if ftpSettings.isFinish == 1:
+                    if threading.activeCount() <= 2:
+                        print("finished!")
+                        return 0
 
 def ftpFileDownload(srrUrlContent, downloadDir, maxThreadNum):
     logDir = downloadDir + "/downloadLog"
@@ -351,7 +354,7 @@ def ftpFileDownload(srrUrlContent, downloadDir, maxThreadNum):
         while threading.activeCount() > maxThreadNum:
             time.sleep(1)
         thisThread.start()
-
+    ftpSettings.isFinish = 1
 
 
 
