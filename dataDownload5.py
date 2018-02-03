@@ -348,13 +348,14 @@ def ftpFileDownload(srrUrlContent, downloadDir, maxThreadNum):
     ftpSettings.logDir = logDir
     downLoadState(downloadDir).start()
     maxThreadNum = maxThreadNum + 1
-
+    ftpSettings.isFinish = 0
     for ii in range(0, len(srrUrlContentVec)):
         thisThread = ftpFileDownloadThread(srrUrlContentVec[ii])
         while threading.activeCount() > maxThreadNum:
             time.sleep(1)
         thisThread.start()
-    ftpSettings.isFinish = 1
+        if ii + 1 == len(srrUrlContentVec):
+            ftpSettings.isFinish = 1
 
 
 
